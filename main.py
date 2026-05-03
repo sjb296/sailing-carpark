@@ -32,11 +32,13 @@ async def sample_job() -> None:
     paths: list = []
     try:
         paths = await scraper.login_and_capture(
-            CLUB_URL, WEBCAM_PATH, CLUB_USER, CLUB_PASS
+            CLUB_URL, WEBCAM_PATH, CLUB_USER, CLUB_PASS,
+            num_screenshots=10,
+            interval_seconds=60
         )
 
         counts = await asyncio.gather(
-            *[asyncio.to_thread(detector.count_cars, p) for p in paths]
+            *[asyncio.to_thread(detector.count_cars, p, f"{p}_annotated") for p in paths]
         )
 
         raw_count = sum(counts) / len(counts)
