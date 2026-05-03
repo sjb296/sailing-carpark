@@ -9,6 +9,9 @@ from datetime import datetime, timezone
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
+from pathlib import Path
 
 import db
 import detector
@@ -24,6 +27,8 @@ MAX_SPACES = int(os.environ["MAX_SPACES"])
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+_INDEX_HTML = (Path(__file__).parent / "dashboard.html").read_text()
 
 
 async def sample_job() -> None:
@@ -122,3 +127,10 @@ async def trigger_sample():
     """Trigger an immediate sampling cycle (runs in the background)."""
     app.state.scheduler.add_job(sample_job)
     return {"status": "sampling started"}
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index():
+    """Render a simple dashboard showing car-park occupancy."""
+    return _INDEX_HTML.format(max_spaces=MAX_SPACES)
+
