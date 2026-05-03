@@ -11,4 +11,5 @@ dependencies = [
     "ultralytics>=8.3",
     "python-dotenv>=1.0",
     "aiofiles>=24.1",
+    "basedpyright>=1.39.3",
 ]
