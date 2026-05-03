@@ -78,12 +78,12 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(
         sample_job,
         "interval",
-        minutes=5,
+        minutes=15,
         max_instances=1,
         next_run_time=datetime.now(),
     )
     scheduler.start()
-    logger.info("Scheduler started (interval=5 min, immediate first run)")
+    logger.info("Scheduler started (interval=60 min, immediate first run)")
 
     app.state.scheduler = scheduler
 
