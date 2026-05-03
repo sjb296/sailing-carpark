@@ -5,13 +5,12 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-
-from pathlib import Path
 
 import db
 import detector
@@ -28,7 +27,7 @@ MAX_SPACES = int(os.environ["MAX_SPACES"])
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-_INDEX_HTML = (Path(__file__).parent / "dashboard.html").read_text()
+_INDEX_HTML = (Path(__file__).parent / "index.html").read_text()
 
 
 async def sample_job() -> None:
@@ -37,13 +36,19 @@ async def sample_job() -> None:
     paths: list = []
     try:
         paths = await scraper.login_and_capture(
-            CLUB_URL, WEBCAM_PATH, CLUB_USER, CLUB_PASS,
+            CLUB_URL,
+            WEBCAM_PATH,
+            CLUB_USER,
+            CLUB_PASS,
             num_screenshots=10,
-            interval_seconds=60
+            interval_seconds=60,
         )
 
         counts = await asyncio.gather(
-            *[asyncio.to_thread(detector.count_cars, p, f"{p}_annotated") for p in paths]
+            *[
+                asyncio.to_thread(detector.count_cars, p, f"{p}_annotated")
+                for p in paths
+            ]
         )
 
         raw_count = sum(counts) / len(counts)
@@ -133,4 +138,3 @@ async def trigger_sample():
 async def index():
     """Render a simple dashboard showing car-park occupancy."""
     return _INDEX_HTML.format(max_spaces=MAX_SPACES)
-
