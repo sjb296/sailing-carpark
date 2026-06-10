@@ -17,7 +17,7 @@ With these images, YOLOv11 is used to count instances of `car` and average it ac
 
 ## The outcome
 
-A fun project for learning about CV/YOLO and Playwright. Likely not that actually useful!
+A fun project for learning about CV/YOLO and Playwright. Not a great estimator of how full the carpark is due to big vans getting in the camera's way!
 
 ## Limitations & lessons
 
