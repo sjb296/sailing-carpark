@@ -7,20 +7,30 @@ compatible GPU.
 """
 
 import os
+import threading
 from pathlib import Path
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 _model = None
+_model_lock = threading.Lock()
 
 
 def _get_model():
-    """Return the YOLOv11n model, downloading and loading it on first call."""
+    """Return the YOLOv11n model, downloading and loading it on first call.
+
+    The model is eagerly warmed up (dummy inference) inside the lock so that
+    later concurrent calls to ``count_cars`` share a fully-initialised model.
+    """
     global _model
     if _model is None:
-        from ultralytics import YOLO
+        with _model_lock:
+            if _model is None:
+                import numpy as np
+                from ultralytics import YOLO
 
-        _model = YOLO("yolo11n.pt")
+                _model = YOLO("yolo11n.pt")
+                _model(np.zeros((64, 64, 3), dtype=np.uint8), verbose=False)
     return _model
 
 
@@ -45,6 +55,9 @@ def count_cars(image_path: str | Path, annotate_path: str | Path | None = None) 
         import cv2
 
         annotated = result.plot()
-        cv2.imwrite(str(annotate_path), annotated)
+        path = Path(annotate_path)
+        if not path.suffix:
+            path = path.with_suffix(".png")
+        cv2.imwrite(str(path), annotated)
 
     return car_count

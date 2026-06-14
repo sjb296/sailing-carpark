@@ -1,9 +1,12 @@
 """Playwright-based webcam screenshot capture with login."""
 
 import asyncio
+import logging
 import sys
 import uuid
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Adjust these selectors to match the real login page once you can inspect it.
 # Run the script with a DEBUG dump first to see what selectors are correct.
@@ -13,12 +16,10 @@ SELECTORS = {
     "submit": "input[type='submit']",
 }
 
-TEMP_DIR = Path("/tmp")
 
-
-async def _dump_page_debug(page, label: str) -> None:
+async def _dump_page_debug(page, label: str, save_dir: Path) -> None:
     """Write a screenshot and print every form element on the current page."""
-    debug_path = TEMP_DIR / f"debug_{label}.png"
+    debug_path = save_dir / f"debug_{label}.png"
     await page.screenshot(path=str(debug_path))
     print(f"[DEBUG] Screenshot  → {debug_path}", file=sys.stderr)
     print(f"[DEBUG] Page title → {await page.title()}", file=sys.stderr)
@@ -107,17 +108,20 @@ async def login_and_capture(
     webcam_path: str,
     username: str,
     password: str,
+    save_dir: Path,
     num_screenshots: int = 5,
     interval_seconds: int = 60,
+    debug: bool = False,
 ) -> list[Path]:
     """Log into the club site, navigate to the webcam page, and capture screenshots.
 
-    Returns a list of paths to PNG files in /tmp.  The caller is responsible for
-    deleting these files after use.
+    Screenshots are saved to *save_dir*.  Returns a list of paths to the saved files.
+    The caller is responsible for deleting these files after use.
     """
     from playwright.async_api import async_playwright
 
     paths: list[Path] = []
+    save_dir.mkdir(parents=True, exist_ok=True)
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -125,23 +129,30 @@ async def login_and_capture(
             page = await browser.new_page()
 
             # Log in
+            logger.info("Navigating to login page: %s/login", base_url)
             await page.goto(f"{base_url}/login")
             await page.wait_for_load_state("networkidle")
 
-            await _dump_page_debug(page, "login_page")
+            if debug:
+                await _dump_page_debug(page, "login_page", save_dir)
 
             await page.fill(SELECTORS["username"], username)
             await page.fill(SELECTORS["password"], password)
             await page.click(SELECTORS["submit"])
 
             await page.wait_for_load_state("networkidle")
-            await _dump_page_debug(page, "after_login")
+            logger.info("Login submitted, current URL: %s", page.url)
+
+            if debug:
+                await _dump_page_debug(page, "after_login", save_dir)
 
             # Go to the webcam page
             await page.goto(f"{base_url.rstrip('/')}{webcam_path}")
             await page.wait_for_load_state("networkidle")
+            logger.info("Webcam page loaded")
 
-            await _dump_page_debug(page, "webcam_page")
+            if debug:
+                await _dump_page_debug(page, "webcam_page", save_dir)
 
             # Find the IPCamLive player iframe
             iframe = page.frame_locator('iframe[src*="ipcamlive.com"]')
@@ -150,6 +161,7 @@ async def login_and_capture(
             play_btn = iframe.locator("#mediaplaybackdiv_ipc_ic_bigPlay")
             await play_btn.wait_for(state="visible", timeout=10000)
             await play_btn.click()
+            logger.info("Video stream started")
 
             # Get snapshots of the webcam
             for i in range(num_screenshots):
@@ -165,10 +177,18 @@ async def login_and_capture(
 
                 suggested = download.suggested_filename
                 ext = Path(suggested).suffix or ".png"
-                path = TEMP_DIR / f"screenshot_{uuid.uuid4().hex[:8]}{ext}"
+                path = save_dir / f"screenshot_{uuid.uuid4().hex[:8]}{ext}"
                 await download.save_as(str(path))
 
                 paths.append(path)
+                logger.info(
+                    "Snapshot %d/%d saved: %s (%d bytes)",
+                    i + 1,
+                    num_screenshots,
+                    path.name,
+                    path.stat().st_size,
+                )
+
                 if i < num_screenshots - 1:
                     await asyncio.sleep(interval_seconds)
 

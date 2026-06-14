@@ -32,6 +32,9 @@
             button:hover {{ background: #2563eb; }}
             button:disabled {{ opacity: 0.5; cursor: not-allowed; }}
             .error {{ color: #f87171; margin-top: 0.5rem; font-size: 0.85rem; }}
+            .snapshot {{ margin-top: 1.5rem; }}
+            .snapshot img {{ width: 100%; border-radius: 10px; border: 2px solid #333; }}
+            .snapshot .placeholder {{ color: #4b5563; font-size: 0.85rem; }}
         </style>
     </head>
     <body>
@@ -44,6 +47,9 @@
                 <div id="bar" class="bar-fill quiet" style="width: 0%"></div>
             </div>
             <div class="meta" id="meta">no sample yet</div>
+            <div class="snapshot" id="snapshot">
+                <div class="placeholder">no image yet</div>
+            </div>
             <button id="btn" onclick="sampleNow()">Sample Now</button>
             <div class="error" id="err"></div>
         </div>
@@ -55,6 +61,7 @@
             const metaEl   = document.getElementById('meta');
             const btnEl    = document.getElementById('btn');
             const errEl    = document.getElementById('err');
+            const snapEl   = document.getElementById('snapshot');
 
             async function refresh() {{
               try {{
@@ -69,6 +76,11 @@
                 metaEl.textContent = d.sampled_at
                   ? 'Last sampled ' + new Date(d.sampled_at).toLocaleString()
                   : 'no sample yet';
+                if (d.image_url) {{
+                  snapEl.innerHTML = '<img src="' + d.image_url + '" alt="Annotated car-park image" />';
+                }} else {{
+                  snapEl.innerHTML = '<div class="placeholder">no image yet</div>';
+                }}
                 errEl.textContent = '';
                 document.title = (d.status === 'no_data' ? '' : pct + '% \u2014 ') + 'Car Park';
               }} catch (e) {{
