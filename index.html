@@ -40,9 +40,9 @@
     <body>
         <div class="card">
             <div id="status" class="status no_data">no data</div>
-            <h1>cars detected in car park</h1>
+            <h1>car park occupancy</h1>
             <div class="count" id="count">--</div>
-            <div class="sub">of {max_spaces} spaces</div>
+            <div class="sub">{max_spaces} total spaces</div>
             <div class="bar-track">
                 <div id="bar" class="bar-fill quiet" style="width: 0%"></div>
             </div>
@@ -70,7 +70,7 @@
                 const pct = Math.round(d.occupancy * 100);
                 statusEl.textContent = d.status.replace('_', ' ');
                 statusEl.className = 'status ' + d.status;
-                countEl.textContent = d.car_count % 1 ? d.car_count.toFixed(1) : d.car_count;
+                countEl.textContent = pct + '%';
                 barEl.style.width = pct + '%';
                 barEl.className = d.status === 'no_data' ? 'bar-fill quiet' : 'bar-fill ' + d.status;
                 metaEl.textContent = d.sampled_at
